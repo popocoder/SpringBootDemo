@@ -8,6 +8,12 @@ public class RedisUtil {
 
     private static JedisPool jedisPool = BizRedis.getJedisPool();
 
+    /**
+     * @Description 执行redis get 方法后，自动释放资源
+     * @param key
+     * @return
+     * @throws Exception
+     */
     public static String get(String key) throws Exception {
         Jedis jedis = null;
         String value = null;
@@ -22,7 +28,6 @@ public class RedisUtil {
                 jedis.close();
             }
         }
-
         return value;
     }
 }

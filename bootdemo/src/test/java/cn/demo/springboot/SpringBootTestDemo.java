@@ -2,7 +2,9 @@ package cn.demo.springboot;
 
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.hadoop.hbase.client.Connection;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.BeanUtils;
@@ -12,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import bootdemo.demo.HelloWorldMainApplication;
+import bootdemo.demo.hbase.pool.HbasePool;
 import bootdemo.demo.kafka.consumer.KafkaDemoConsumer;
 import bootdemo.demo.kafka.consumer.queue.CollectQueue;
 import bootdemo.demo.kafka.producer.KafkaDemoProducer;
@@ -99,7 +102,37 @@ public class SpringBootTestDemo {
                 e.printStackTrace();
             }
         }
-        
+
     }
-    
+
+    @Test
+    public void hbaseTest() {
+        int a = 0;
+        Queue<Connection> queue = new LinkedBlockingQueue<>();
+        while (a < 40) {
+            Connection connection = null;
+            try {
+                connection = HbasePool.getConnection();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            queue.add(connection);
+            a++;
+            System.out.println(HbasePool.conNum());
+        }
+
+        while (true) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            if(!queue.isEmpty()){
+                HbasePool.returnConnect(queue.poll());
+            }
+            System.out.println(HbasePool.conNum());
+        }
+    }
+
 }

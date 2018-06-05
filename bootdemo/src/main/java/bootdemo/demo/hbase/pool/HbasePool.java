@@ -56,6 +56,7 @@ public class HbasePool {
             } catch (IOException e) {
                 logger.error("归还连接失败！", e);
             } finally {
+                con=null;
                 counter--;
             }
         } else {

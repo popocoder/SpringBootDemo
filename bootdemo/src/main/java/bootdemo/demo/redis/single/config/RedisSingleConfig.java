@@ -1,4 +1,4 @@
-package bootdemo.demo.redis.config;
+package bootdemo.demo.redis.single.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -13,8 +13,8 @@ import redis.clients.jedis.JedisPoolConfig;
  * @version 1.0.0
  */
 @Component
-@ConfigurationProperties(prefix = "redis")
-public class RedisCommonConfig {
+@ConfigurationProperties(prefix = "redis.single")
+public class RedisSingleConfig {
 
     private static JedisPoolConfig jpc;
 
@@ -49,7 +49,7 @@ public class RedisCommonConfig {
     }
 
     public void setConnectionTimeout(int connectionTimeout) {
-        RedisCommonConfig.connectionTimeout = connectionTimeout;
+        RedisSingleConfig.connectionTimeout = connectionTimeout;
     }
 
     public static int getSocketTimeout() {
@@ -57,26 +57,26 @@ public class RedisCommonConfig {
     }
 
     public void setSocketTimeout(int socketTimeout) {
-        RedisCommonConfig.socketTimeout = socketTimeout;
+        RedisSingleConfig.socketTimeout = socketTimeout;
     }
 
     public void setMinIdle(int minIdle) {
-        RedisCommonConfig.minIdle = minIdle;
+        RedisSingleConfig.minIdle = minIdle;
     }
 
     public void setMaxIdle(int maxIdle) {
-        RedisCommonConfig.maxIdle = maxIdle;
+        RedisSingleConfig.maxIdle = maxIdle;
     }
 
     public void setMaxTotal(int maxTotal) {
-        RedisCommonConfig.maxTotal = maxTotal;
+        RedisSingleConfig.maxTotal = maxTotal;
     }
 
     public void setMaxWaitMillis(int maxWaitMillis) {
-        RedisCommonConfig.maxWaitMillis = maxWaitMillis;
+        RedisSingleConfig.maxWaitMillis = maxWaitMillis;
     }
 
     public void setTestOnBorrow(boolean testOnBorrow) {
-        RedisCommonConfig.testOnBorrow = testOnBorrow;
+        RedisSingleConfig.testOnBorrow = testOnBorrow;
     }
 }

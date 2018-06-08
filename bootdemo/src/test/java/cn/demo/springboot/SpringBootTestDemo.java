@@ -26,8 +26,10 @@ import bootdemo.demo.kafka.consumer.KafkaDemoConsumer;
 import bootdemo.demo.kafka.consumer.queue.CollectQueue;
 import bootdemo.demo.kafka.producer.KafkaDemoProducer;
 import bootdemo.demo.kafka.producer.config.KafkaConfigProducer;
-import bootdemo.demo.redis.BizRedis;
+import bootdemo.demo.redis.cluster.RedisCluster;
+import bootdemo.demo.redis.single.BizRedis;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPool;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -151,7 +153,7 @@ public class SpringBootTestDemo {
             System.out.println(e);
         }
 
-        String rowKey = "abcde12345";
+        String rowKey = "fghij456789";
         HbaseOpt.deleteDataByRowKey(tableName, rowKey);
 
         HashMap<String, String> infoMap = new HashMap<>();
@@ -179,20 +181,20 @@ public class SpringBootTestDemo {
         String rowKey = "abcde12345";
 
         // 仅根据rowKey查询所有
-        List<Object> list1 = HbaseOpt.queryDataByParams(tableName, rowKey, 3, null);
+        Map<String, Object> list1 = HbaseOpt.queryDataByParams(tableName, rowKey, 3, null);
         System.out.println(JSON.toJSONString(list1));
 
         // 根据rowKey - family 查
         Map<String, String[]> map = new HashMap<>();
         map.put("info", null);
-        List<Object> list2 = HbaseOpt.queryDataByParams(tableName, rowKey, 3, map);
+        Map<String, Object> list2 = HbaseOpt.queryDataByParams(tableName, rowKey, 3, map);
         System.out.println(JSON.toJSONString(list2));
 
         // 根据rowKey - family - column 查
         Map<String, String[]> map1 = new HashMap<>();
         map1.put("info", new String[] { "name", "age" });
         map1.put("work", new String[] { "addr" });
-        List<Object> list3 = HbaseOpt.queryDataByParams(tableName, rowKey, 3, map1);
+        Map<String, Object> list3 = HbaseOpt.queryDataByParams(tableName, rowKey, 3, map1);
         System.out.println(JSON.toJSONString(list3));
 
         // 综合查询
@@ -200,7 +202,31 @@ public class SpringBootTestDemo {
         map2.put("info", new String[] { "name", "age" });
         map2.put("work", null);
         map2.put("money", new String[] { "pay" });
-        List<Object> list4 = HbaseOpt.queryDataByParams(tableName, rowKey, 3, map2);
+        Map<String, Object> list4 = HbaseOpt.queryDataByParams(tableName, rowKey, 3, map2);
         System.out.println(JSON.toJSONString(list4));
+    }
+
+    @Test
+    public void hbaseScanTest() throws Exception {
+        String tableName = "userTest";
+        // Map<String, Object> map = HbaseOpt.scanDataByRowRange(tableName,null,null);
+        // System.out.println(JSON.toJSONString(map));
+
+        // Map<String, Object> map1 = HbaseOpt.scanDataByRegex(tableName,"");
+        // System.out.println(JSON.toJSONString(map1));
+
+        // Map<String, Object> map2 = HbaseOpt.scanDataCountByRegex(tableName,"^abcd");
+        // System.out.println(JSON.toJSONString(map2));
+
+        // Map<String, Object> map3 = HbaseOpt.scanDataByRegexAndPage(tableName,"^f",4);
+        // System.out.println(JSON.toJSONString(map3));
+    }
+    
+    @Test
+    public void redisClusterTest() throws Exception {
+        JedisCluster cluster = RedisCluster.getJedisCluster();
+        // nx 不存在插入  xx 存在刷新   ex秒  px毫秒
+        cluster.set("aaaakey", "bbbbvalue", "nx", "ex", 10);
+        System.in.read();
     }
 }

@@ -2,7 +2,7 @@ package bootdemo.demo.proxy;
 
 import org.springframework.beans.BeanUtils;
 
-import bootdemo.demo.redis.AdminRedis;
+import bootdemo.demo.redis.single.AdminRedis;
 import redis.clients.jedis.Jedis;
 
 public class Demo {

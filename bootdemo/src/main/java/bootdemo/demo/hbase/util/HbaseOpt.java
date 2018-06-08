@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -16,8 +18,14 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.PageFilter;
+import org.apache.hadoop.hbase.filter.RegexStringComparator;
+import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 
@@ -280,8 +288,7 @@ public class HbaseOpt {
      * @return
      * @throws Exception
      */
-    @SuppressWarnings("unchecked")
-    public static List<Object> queryData(String tableName, String rowKey) throws Exception {
+    public static Map<String, Object> queryData(String tableName, String rowKey) throws Exception {
         Connection con = null;
         Table table = null;
         try {
@@ -293,30 +300,13 @@ public class HbaseOpt {
             Get get = new Get(Bytes.toBytes(rowKey));
             Result result = table.get(get);
 
-            Map<String, Object> map = new HashMap<>();
-            for (Cell cell : result.listCells()) {
-                Long timeStamp = cell.getTimestamp();
-                String familyRs = Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
-                String keyRs =
-                        Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
-                String valueRs = Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+            Map<String, Object> map = analysisQueryResult(result);
 
-                // =========参数封装=========
-                Map<String, Object> map2 = (Map<String, Object>) map.get(timeStamp.toString());
-                if (map2 == null) {
-                    map2 = new HashMap<>();
-                }
-                Map<String, Object> map3 = (Map<String, Object>) map2.get(familyRs);
-                if (map3 == null) {
-                    map3 = new HashMap<>();
-                }
-                map3.put(keyRs, valueRs);
-                map2.put(familyRs, map3);
-                map2.put("rowKey", rowKey);
-                map2.put("timeStamp", timeStamp.toString());
-                map.put(timeStamp.toString(), map2);
-            }
-            return new ArrayList<>(map.values());
+            // ============封装返回结果===============
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("result", map.values());
+            resultMap.put("totalCount", map.values().size());
+            return resultMap;
         } finally {
             if (table != null) {
                 table.close();
@@ -336,8 +326,7 @@ public class HbaseOpt {
      * @return
      * @throws Exception
      */
-    @SuppressWarnings("unchecked")
-    public static List<Object> queryDataByParams(String tableName, String rowKey, int version,
+    public static Map<String, Object> queryDataByParams(String tableName, String rowKey, int version,
             Map<String, String[]> paramMap) throws Exception {
         Connection con = null;
         Table table = null;
@@ -349,44 +338,17 @@ public class HbaseOpt {
             // ============进行GET操作==================
             Get get = new Get(Bytes.toBytes(rowKey));
             get.readVersions(version);
-            // ============进行条件判断==================
-            if (paramMap != null && !paramMap.isEmpty()) {
-                for (Entry<String, String[]> entry : paramMap.entrySet()) {
-                    if (entry.getValue() == null) {
-                        get.addFamily(Bytes.toBytes(entry.getKey()));
-                    } else {
-                        for (String column : entry.getValue()) {
-                            get.addColumn(Bytes.toBytes(entry.getKey()), Bytes.toBytes(column));
-                        }
-                    }
-                }
-            }
+
+            // ============组装条件==================
+            assembleCondition(paramMap, get);
             Result result = table.get(get);
+            Map<String, Object> map = analysisQueryResult(result);
 
-            Map<String, Object> map = new HashMap<>();
-            for (Cell cell : result.listCells()) {
-                Long timeStamp = cell.getTimestamp();
-                String familyRs = Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
-                String keyRs =
-                        Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
-                String valueRs = Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
-
-                // =========参数封装=========
-                Map<String, Object> map2 = (Map<String, Object>) map.get(timeStamp.toString());
-                if (map2 == null) {
-                    map2 = new HashMap<>();
-                }
-                Map<String, Object> map3 = (Map<String, Object>) map2.get(familyRs);
-                if (map3 == null) {
-                    map3 = new HashMap<>();
-                }
-                map3.put(keyRs, valueRs);
-                map2.put(familyRs, map3);
-                map2.put("rowKey", rowKey);
-                map2.put("timeStamp", timeStamp.toString());
-                map.put(timeStamp.toString(), map2);
-            }
-            return new ArrayList<>(map.values());
+            // ============封装返回结果===============
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("result", map.values());
+            resultMap.put("totalCount", map.values().size());
+            return resultMap;
         } finally {
             if (table != null) {
                 table.close();
@@ -408,9 +370,8 @@ public class HbaseOpt {
      * @return
      * @throws Exception
      */
-    @SuppressWarnings("unchecked")
-    public static List<Object> queryDataByParamsAndTime(String tableName, String rowKey, int version, long startTime,
-            long endTime, Map<String, String[]> paramMap) throws Exception {
+    public static Map<String, Object> queryDataByParamsAndTime(String tableName, String rowKey, int version,
+            long startTime, long endTime, Map<String, String[]> paramMap) throws Exception {
         Connection con = null;
         Table table = null;
         try {
@@ -426,44 +387,16 @@ public class HbaseOpt {
             } else if (startTime != 0) {
                 get.setTimeStamp(startTime);
             }
-            // ============进行条件判断==================
-            if (paramMap != null && !paramMap.isEmpty()) {
-                for (Entry<String, String[]> entry : paramMap.entrySet()) {
-                    if (entry.getValue() == null) {
-                        get.addFamily(Bytes.toBytes(entry.getKey()));
-                    } else {
-                        for (String column : entry.getValue()) {
-                            get.addColumn(Bytes.toBytes(entry.getKey()), Bytes.toBytes(column));
-                        }
-                    }
-                }
-            }
+            // ============组装条件==================
+            assembleCondition(paramMap, get);
             Result result = table.get(get);
+            Map<String, Object> map = analysisQueryResult(result);
 
-            Map<String, Object> map = new HashMap<>();
-            for (Cell cell : result.listCells()) {
-                Long timeStamp = cell.getTimestamp();
-                String familyRs = Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
-                String keyRs =
-                        Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
-                String valueRs = Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
-
-                // =========参数封装=========
-                Map<String, Object> map2 = (Map<String, Object>) map.get(timeStamp.toString());
-                if (map2 == null) {
-                    map2 = new HashMap<>();
-                }
-                Map<String, Object> map3 = (Map<String, Object>) map2.get(familyRs);
-                if (map3 == null) {
-                    map3 = new HashMap<>();
-                }
-                map3.put(keyRs, valueRs);
-                map2.put(familyRs, map3);
-                map2.put("rowKey", rowKey);
-                map2.put("timeStamp", timeStamp.toString());
-                map.put(timeStamp.toString(), map2);
-            }
-            return new ArrayList<>(map.values());
+            // ============封装返回结果===============
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("result", map.values());
+            resultMap.put("totalCount", map.values().size());
+            return resultMap;
         } finally {
             if (table != null) {
                 table.close();
@@ -472,5 +405,245 @@ public class HbaseOpt {
                 HbasePool.returnConnect(con);
             }
         }
+    }
+
+    /**
+     * @Description 装载条件
+     * @param paramMap
+     * @param get
+     */
+    private static void assembleCondition(Map<String, String[]> paramMap, Get get) {
+        if (paramMap != null && !paramMap.isEmpty()) {
+            for (Entry<String, String[]> entry : paramMap.entrySet()) {
+                if (entry.getValue() == null) {
+                    get.addFamily(Bytes.toBytes(entry.getKey()));
+                } else {
+                    for (String column : entry.getValue()) {
+                        get.addColumn(Bytes.toBytes(entry.getKey()), Bytes.toBytes(column));
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @Description 解析Result
+     * @param result
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> analysisQueryResult(Result result) {
+        Map<String, Object> map = new HashMap<>();
+        for (Cell cell : result.listCells()) {
+            Long timeStamp = cell.getTimestamp();
+            String rowKey = Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+            String familyRs = Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
+            String keyRs =
+                    Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+            String valueRs = Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+
+            // =========参数封装=========
+            Map<String, Object> map2 = (Map<String, Object>) map.get(timeStamp.toString());
+            if (map2 == null) {
+                map2 = new HashMap<>();
+            }
+            Map<String, Object> map3 = (Map<String, Object>) map2.get(familyRs);
+            if (map3 == null) {
+                map3 = new HashMap<>();
+            }
+            map3.put(keyRs, valueRs);
+            map2.put(familyRs, map3);
+            map2.put("rowKey", rowKey);
+            map2.put("timeStamp", timeStamp.toString());
+            map.put(timeStamp.toString(), map2);
+        }
+        return map;
+    }
+
+    /**
+     * @Description 根据rowkey起始范围,获取数据
+     * @param tableName
+     * @param startRow
+     * @param endRow
+     * @return
+     * @throws Exception
+     */
+    public static Map<String, Object> scanDataByRowRange(String tableName, String startRow, String endRow)
+            throws Exception {
+        Connection con = null;
+        Table table = null;
+        try {
+            // ============获取连接管理==================
+            con = HbasePool.getConnection();
+            table = con.getTable(TableName.valueOf(tableName));
+            Scan scan = new Scan();
+            // 按rowkey字典序扫描
+            if (StringUtils.isNoneBlank(startRow)) {
+                scan.withStartRow(Bytes.toBytes(startRow));
+            }
+            if (StringUtils.isNoneBlank(endRow)) {
+                scan.withStopRow(Bytes.toBytes(endRow));
+            }
+            ResultScanner scanner = table.getScanner(scan);
+
+            List<Object> list = new ArrayList<>();
+            for (Result result : scanner) {
+                list.add(analysisScanResult(result));
+            }
+            // ============封装返回结果===============
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("result", list);
+            resultMap.put("totalCount", list.size());
+            return resultMap;
+        } finally {
+            if (table != null) {
+                table.close();
+            }
+            if (con != null) {
+                HbasePool.returnConnect(con);
+            }
+        }
+    }
+
+    /**
+     * @Description 根据正则匹配rowKey获取数据
+     * @param tableName
+     * @param regex
+     * @return
+     * @throws Exception
+     */
+    public static Map<String, Object> scanDataByRegex(String tableName, String regex) throws Exception {
+        Connection con = null;
+        Table table = null;
+        try {
+            // ============获取连接管理==================
+            con = HbasePool.getConnection();
+            table = con.getTable(TableName.valueOf(tableName));
+            Scan scan = new Scan();
+            RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL, new RegexStringComparator(regex));
+            scan.setFilter(rowFilter);
+            ResultScanner scanner = table.getScanner(scan);
+
+            List<Object> list = new ArrayList<>();
+            for (Result result : scanner) {
+                list.add(analysisScanResult(result));
+            }
+            // ============封装返回结果===============
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("result", list);
+            resultMap.put("totalCount", list.size());
+            return resultMap;
+        } finally {
+            if (table != null) {
+                table.close();
+            }
+            if (con != null) {
+                HbasePool.returnConnect(con);
+            }
+        }
+    }
+
+    /**
+     * @Description 根据正则统计匹配rowkey数量
+     * @param tableName
+     * @param regex
+     * @return
+     * @throws Exception
+     */
+    public static Map<String, Object> scanDataCountByRegex(String tableName, String regex) throws Exception {
+        Connection con = null;
+        Table table = null;
+        try {
+            // ============获取连接管理==================
+            con = HbasePool.getConnection();
+            table = con.getTable(TableName.valueOf(tableName));
+            Scan scan = new Scan();
+            RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL, new RegexStringComparator(regex));
+            scan.setFilter(rowFilter);
+            scan.setFilter(new FirstKeyOnlyFilter());
+            scan.setCaching(500);
+            scan.setCacheBlocks(false);
+            ResultScanner scanner = table.getScanner(scan);
+
+            int totalCount = 0;
+            while (scanner.next() != null) {
+                totalCount++;
+            }
+            // ============封装返回结果===============
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("totalCount", totalCount);
+            return resultMap;
+        } finally {
+            if (table != null) {
+                table.close();
+            }
+            if (con != null) {
+                HbasePool.returnConnect(con);
+            }
+        }
+    }
+
+    /**
+     * @Description 根据正则匹配rowkey限制大小查询
+     * @param tableName
+     * @param regex
+     * @param pageSize
+     * @return
+     * @throws Exception
+     */
+    public static Map<String, Object> scanDataByRegexAndPage(String tableName, String regex, long pageSize)
+            throws Exception {
+        Connection con = null;
+        Table table = null;
+        try {
+            // ============获取连接管理==================
+            con = HbasePool.getConnection();
+            table = con.getTable(TableName.valueOf(tableName));
+            Scan scan = new Scan();
+            scan.setFilter(new PageFilter(pageSize));
+            scan.setFilter(new RowFilter(CompareOperator.EQUAL, new RegexStringComparator(regex)));
+            ResultScanner scanner = table.getScanner(scan);
+
+            List<Object> list = new ArrayList<>();
+            for (Result result : scanner) {
+                list.add(analysisScanResult(result));
+            }
+            // ============封装返回结果===============
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("result", list);
+            resultMap.put("totalCount", list.size());
+            return resultMap;
+        } finally {
+            if (table != null) {
+                table.close();
+            }
+            if (con != null) {
+                HbasePool.returnConnect(con);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> analysisScanResult(Result result) {
+        Map<String, Object> map = new HashMap<>();
+        for (Cell cell : result.listCells()) {
+            Long timeStamp = cell.getTimestamp();
+            String rowKey = Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+            String familyRs = Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
+            String keyRs =
+                    Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+            String valueRs = Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+
+            // =========参数封装=========
+            Map<String, Object> map2 = (Map<String, Object>) map.get(familyRs);
+            if (map2 == null) {
+                map2 = new HashMap<>();
+            }
+            map2.put(keyRs, valueRs);
+            map.put(familyRs, map2);
+            map.put("rowKey", rowKey);
+            map.put("timeStamp", timeStamp.toString());
+        }
+        return map;
     }
 }

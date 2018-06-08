@@ -1,11 +1,11 @@
-package bootdemo.demo.redis;
+package bootdemo.demo.redis.single;
 
 import java.net.URI;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import bootdemo.demo.redis.config.RedisCommonConfig;
+import bootdemo.demo.redis.single.config.RedisSingleConfig;
 import redis.clients.jedis.JedisPool;
 
 /**
@@ -50,8 +50,8 @@ public class BizRedis {
     public static synchronized JedisPool getJedisPool() {
         if (jedisPool == null) {
             URI redisUri = URI.create("redis://" + host + ":" + port);
-            jedisPool = new JedisPool(RedisCommonConfig.getJedisPoolConfig(), redisUri,
-                    RedisCommonConfig.getConnectionTimeout(), RedisCommonConfig.getSocketTimeout());
+            jedisPool = new JedisPool(RedisSingleConfig.getJedisPoolConfig(), redisUri,
+                    RedisSingleConfig.getConnectionTimeout(), RedisSingleConfig.getSocketTimeout());
         }
         return jedisPool;
     }

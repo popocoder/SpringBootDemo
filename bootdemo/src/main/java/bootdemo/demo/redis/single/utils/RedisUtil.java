@@ -1,6 +1,6 @@
-package bootdemo.demo.redis.util;
+package bootdemo.demo.redis.single.utils;
 
-import bootdemo.demo.redis.BizRedis;
+import bootdemo.demo.redis.single.BizRedis;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
@@ -8,6 +8,8 @@ public class RedisUtil {
 
     private static JedisPool jedisPool = BizRedis.getJedisPool();
 
+    
+    
     /**
      * @Description 执行redis get 方法后，自动释放资源
      * @param key

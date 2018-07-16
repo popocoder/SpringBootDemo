@@ -1,0 +1,172 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.springboot.demo</groupId>
+    <artifactId>springboot-demo</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <!-- <repositories>
+        <repository>
+            <id>aWiFi-rep</id>
+            <name>Private Repository</name>
+            <url>http://192.168.41.25:8081/nexus/content/groups/public</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>aWiFi-rep-plugin</id>
+            <url>http://192.168.41.25:8081/nexus/content/groups/public</url>
+        </pluginRepository>
+    </pluginRepositories>
+    <distributionManagement>
+        <repository>
+            <id>aWiFi-rep-releases</id>
+            <name>Nexus Release Repository</name>
+            <url>http://192.168.41.25:8081/nexus/content/repositories/releases</url>
+        </repository>
+
+        <snapshotRepository>
+            <id>aWiFi-rep-snapshots</id>
+            <name>Nexus Snapshot Repository</name>
+            <url>http://192.168.41.25:8081/nexus/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement> -->
+
+    <!-- 定义公共资源版本 -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.0.1.RELEASE</version>
+        <relativePath />
+    </parent>
+
+
+    <modules>
+        <module>springboot-demo-base-api</module>
+        <module>springboot-demo-common</module>
+        <module>springboot-demo-redis</module>
+        <module>springboot-demo-hbase</module>
+        <module>springboot-demo-kafka</module>
+        <module>springboot-demo-example-redisdemo</module>
+        <module>springboot-demo-example-mvc</module>
+        <module>springboot-demo-example-hbasedemo</module>
+    </modules>
+
+
+    <!-- 各jar版本号统一定义 -->
+    <properties>
+
+        <mybatis-spring-boot>1.2.0</mybatis-spring-boot>
+        <druid.version>1.0.29</druid.version>
+
+        <fastjson.version>1.2.23</fastjson.version>
+
+        <commons-logging.version>1.1.3</commons-logging.version>
+        <log4j.version>1.2.17</log4j.version>
+
+        <mockito.version>1.10.19</mockito.version>
+        <powermock-api-mockito.version>1.6.5</powermock-api-mockito.version>
+        <powermock-module-junit4.version>1.6.5</powermock-module-junit4.version>
+        <junit-addons_version>1.4</junit-addons_version>
+
+        <javax-ws-rs-api_version>2.0</javax-ws-rs-api_version>
+        <dubbox_version>2.8.4</dubbox_version>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+
+    </properties>
+
+
+    <dependencyManagement>
+        <dependencies>
+
+            <!-- Spring Boot Mybatis 依赖 -->
+            <dependency>
+                <groupId>org.mybatis.spring.boot</groupId>
+                <artifactId>mybatis-spring-boot-starter</artifactId>
+                <version>${mybatis-spring-boot}</version>
+            </dependency>
+
+            <!-- druid连接池 -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid</artifactId>
+                <version>${druid.version}</version>
+            </dependency>
+
+
+            <!-- fastjson，阿里Json处理 -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>${fastjson.version}</version>
+            </dependency>
+
+
+
+            <!-- mockito -->
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-all</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-api-mockito</artifactId>
+                <version>${powermock-api-mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-module-junit4</artifactId>
+                <version>${powermock-module-junit4.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- 日志分级 -->
+            <dependency>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+                <version>${commons-logging.version}</version>
+            </dependency>
+
+            <!-- Log4j 日志 -->
+            <dependency>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>javax.ws.rs-api</artifactId>
+                <version>${javax-ws-rs-api_version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>dubbo</artifactId>
+                <version>${dubbox_version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>curator-client</artifactId>
+                        <groupId>org.apache.curator</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>curator-framework</artifactId>
+                        <groupId>org.apache.curator</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.github.sgroschupf</groupId>
+                        <artifactId>zkclient</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+</project>

@@ -1,0 +1,22 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.springboot.demo</groupId>
+        <artifactId>springboot-demo</artifactId>
+        <version>1.0.0</version>
+    </parent>
+    <artifactId>springboot-demo-example-mvc</artifactId>
+    <packaging>pom</packaging>
+    <modules>
+        <module>springboot-demo-example-mvc-api</module>
+        <module>springboot-demo-example-mvc-service</module>
+    </modules>
+    <dependencies>
+        <dependency>
+            <groupId>com.springboot.demo</groupId>
+            <artifactId>springboot-demo-common</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+    </dependencies>
+</project>
